@@ -1,0 +1,4 @@
+weights/checkpts/config.json
+weights/checkpts/g_02500000
+weights/checkpts/grad_444.pt
+weights/checkpts/train.log

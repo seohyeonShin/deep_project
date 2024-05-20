@@ -1,12 +1,15 @@
-from ultralytics import YOLO
 import streamlit as st
 import cv2
+import torch
 from pytube import YouTube
 
 import settings
 
+from weights.tts_weights.inference import PerturbationGradTTS as TTSModel
+from weights.mt_weights.inference import MTModel
 
-def load_model(model_path):
+
+def load_model(model_path, type='tts'):
     """
     Loads a YOLO object detection model from the specified model_path.
 
@@ -16,54 +19,14 @@ def load_model(model_path):
     Returns:
         A YOLO object detection model.
     """
-    model = YOLO(model_path)
+    if type == 'tts':
+        model = TTSModel(model_path, settings.HIFI_CONF, settings.HIFI_MODEL)
+    else:
+        # mt model load
+        model = MTModel(model_path)
     return model
 
-
-def display_tracker_options():
-    display_tracker = st.radio("Display Tracker", ('Yes', 'No'))
-    is_display_tracker = True if display_tracker == 'Yes' else False
-    if is_display_tracker:
-        tracker_type = st.radio("Tracker", ("bytetrack.yaml", "botsort.yaml"))
-        return is_display_tracker, tracker_type
-    return is_display_tracker, None
-
-
-def _display_detected_frames(conf, model, st_frame, image, is_display_tracking=None, tracker=None):
-    """
-    Display the detected objects on a video frame using the YOLOv8 model.
-
-    Args:
-    - conf (float): Confidence threshold for object detection.
-    - model (YoloV8): A YOLOv8 object detection model.
-    - st_frame (Streamlit object): A Streamlit object to display the detected video.
-    - image (numpy array): A numpy array representing the video frame.
-    - is_display_tracking (bool): A flag indicating whether to display object tracking (default=None).
-
-    Returns:
-    None
-    """
-
-    # Resize the image to a standard size
-    image = cv2.resize(image, (720, int(720*(9/16))))
-
-    # Display object tracking, if specified
-    if is_display_tracking:
-        res = model.track(image, conf=conf, persist=True, tracker=tracker)
-    else:
-        # Predict the objects in the image using the YOLOv8 model
-        res = model.predict(image, conf=conf)
-
-    # # Plot the detected objects on the video frame
-    res_plotted = res[0].plot()
-    st_frame.image(res_plotted,
-                   caption='Detected Video',
-                   channels="BGR",
-                   use_column_width=True
-                   )
-
-
-def play_youtube_video(conf, model):
+def play_webcam(time_step, model):
     """
     Plays a webcam stream. Detects Objects in real-time using the YOLOv8 object detection model.
 
@@ -77,148 +40,91 @@ def play_youtube_video(conf, model):
     Raises:
         None
     """
-    source_youtube = st.sidebar.text_input("YouTube Video url")
-
-    is_display_tracker, tracker = display_tracker_options()
-
-    if st.sidebar.button('Detect Objects'):
-        try:
-            yt = YouTube(source_youtube)
-            stream = yt.streams.filter(file_extension="mp4", res=720).first()
-            vid_cap = cv2.VideoCapture(stream.url)
-
-            st_frame = st.empty()
-            while (vid_cap.isOpened()):
-                success, image = vid_cap.read()
-                if success:
-                    _display_detected_frames(conf,
-                                             model,
-                                             st_frame,
-                                             image,
-                                             is_display_tracker,
-                                             tracker
-                                             )
-                else:
-                    vid_cap.release()
-                    break
-        except Exception as e:
-            st.sidebar.error("Error loading video: " + str(e))
-
-
-def play_rtsp_stream(conf, model):
-    """
-    Plays an rtsp stream. Detects Objects in real-time using the YOLOv8 object detection model.
-
-    Parameters:
-        conf: Confidence of YOLOv8 model.
-        model: An instance of the `YOLOv8` class containing the YOLOv8 model.
-
-    Returns:
-        None
-
-    Raises:
-        None
-    """
-    source_rtsp = st.sidebar.text_input("rtsp stream url")
-    is_display_tracker, tracker = display_tracker_options()
-    if st.sidebar.button('Detect Objects'):
-        try:
-            vid_cap = cv2.VideoCapture(source_rtsp)
-            st_frame = st.empty()
-            while (vid_cap.isOpened()):
-                success, image = vid_cap.read()
-                if success:
-                    _display_detected_frames(conf,
-                                             model,
-                                             st_frame,
-                                             image,
-                                             is_display_tracker,
-                                             tracker
-                                             )
-                else:
-                    vid_cap.release()
-                    break
-        except Exception as e:
-            st.sidebar.error("Error loading RTSP stream: " + str(e))
-
-def play_webcam(conf, model):
-    """
-    Plays a webcam stream. Detects Objects in real-time using the YOLOv8 object detection model.
-
-    Parameters:
-        conf: Confidence of YOLOv8 model.
-        model: An instance of the `YOLOv8` class containing the YOLOv8 model.
-
-    Returns:
-        None
-
-    Raises:
-        None
-    """
+    if 'is_running' not in st.session_state:
+        st.session_state.is_running = False
+    tts_model, mt_model = model
     source_webcam = settings.WEBCAM_PATH
-    is_display_tracker, tracker = display_tracker_options()
-    if st.sidebar.button('Detect Objects'):
+    FRAME_WINDOW = st.image([])
+    file_path = f'recorded_sample.mp4'
+    fps = 30
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+
+    start = st.button('Start')
+    stop = st.button('Stop')
+    frames = []
+    if start:
         try:
             vid_cap = cv2.VideoCapture(source_webcam)
-            st_frame = st.empty()
-            while (vid_cap.isOpened()):
+            width = vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+            height = vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+            size = (int(width), int(height))
+            out = cv2.VideoWriter(file_path, fourcc, fps, size)
+
+            is_run = True
+            while (vid_cap.isOpened() and is_run):
                 success, image = vid_cap.read()
                 if success:
-                    _display_detected_frames(conf,
-                                             model,
-                                             st_frame,
-                                             image,
-                                             is_display_tracker,
-                                             tracker,
-                                             )
+                    # 기존의 경우 Real-Time Detection
+                    # 해당 프로젝트에서는 Real-Time Text 추론 및 음성 생성
+                    frame = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                    FRAME_WINDOW.image(frame)
+                    out.write(frame)
                 else:
                     vid_cap.release()
+                    out.release()
                     break
+
         except Exception as e:
             st.sidebar.error("Error loading video: " + str(e))
+    if stop:
+        path = file_path
+        text = mt_model.infer(path)
+        st.write(text)
 
+        audio = tts_model.generate_speech(text, time_step)
+        st.audio(audio, format="audio/mp3", sample_rate=22050)
 
-def play_stored_video(conf, model):
-    """
-    Plays a stored video file. Tracks and detects objects in real-time using the YOLOv8 object detection model.
-
-    Parameters:
-        conf: Confidence of YOLOv8 model.
-        model: An instance of the `YOLOv8` class containing the YOLOv8 model.
-
-    Returns:
-        None
-
-    Raises:
-        None
-    """
-    source_vid = st.sidebar.selectbox(
-        "Choose a video...", settings.VIDEOS_DICT.keys())
-
-    is_display_tracker, tracker = display_tracker_options()
-
-    with open(settings.VIDEOS_DICT.get(source_vid), 'rb') as video_file:
-        video_bytes = video_file.read()
-    if video_bytes:
-        st.video(video_bytes)
-
-    if st.sidebar.button('Detect Video Objects'):
-        try:
-            vid_cap = cv2.VideoCapture(
-                str(settings.VIDEOS_DICT.get(source_vid)))
-            st_frame = st.empty()
-            while (vid_cap.isOpened()):
-                success, image = vid_cap.read()
-                if success:
-                    _display_detected_frames(conf,
-                                             model,
-                                             st_frame,
-                                             image,
-                                             is_display_tracker,
-                                             tracker
-                                             )
-                else:
-                    vid_cap.release()
-                    break
-        except Exception as e:
-            st.sidebar.error("Error loading video: " + str(e))
+#
+# def play_stored_video(time_step, model):
+#     """
+#     Plays a stored video file. Tracks and detects objects in real-time using the YOLOv8 object detection model.
+#
+#     Parameters:
+#         conf: Confidence of YOLOv8 model.
+#         model: An instance of the `YOLOv8` class containing the YOLOv8 model.
+#
+#     Returns:
+#         None
+#
+#     Raises:
+#         None
+#     """
+#     tts_model, mt_model = model
+#     source_vid = st.sidebar.selectbox(
+#         "Choose a video...", settings.VIDEOS_DICT.keys())
+#
+#
+#     with open(settings.VIDEOS_DICT.get(source_vid), 'rb') as video_file:
+#         video_bytes = video_file.read()
+#     if video_bytes:
+#         st.video(video_bytes)
+#
+#     if st.sidebar.button('Detect Video Objects'):
+#         try:
+#             vid_cap = cv2.VideoCapture(
+#                 str(settings.VIDEOS_DICT.get(source_vid)))
+#             st_frame = st.empty()
+#             while (vid_cap.isOpened()):
+#                 success, image = vid_cap.read()
+#                 if success:
+#                     # 기존의 경우 Real-Time Detection
+#                     # 해당 프로젝트에서는 Real-Time Text 추론 및 음성 생성
+#                     pass
+#                 else:
+#                     vid_cap.release()
+#                     break
+#             text = '위의 모델을 통해 추론된 테스트 텍스트입니다.'.encode('utf-8')
+#             audio = tts_model.generate_speech(text, time_step)
+#             st.audio(audio, format="audio/mp3")
+#         except Exception as e:
+#             st.sidebar.error("Error loading video: " + str(e))

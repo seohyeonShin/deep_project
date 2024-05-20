@@ -1,0 +1,7 @@
+weights/tts_weights/checkpts/config.json
+weights/tts_weights/checkpts/g_02500000
+weights/tts_weights/checkpts/grad_444.pt
+weights/tts_weights/checkpts/train.log
+weights/mt_weights/checkpts/mt_weight.pth
+weights/mt_weights/data/sample.mp4
+weights/mt_weights/data/info_val.json

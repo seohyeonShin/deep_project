@@ -14,7 +14,7 @@ import helper
 
 # Setting page layout
 st.set_page_config(
-    page_title="Object Detection using YOLOv8",
+    page_title="Sign Translation using CNNtoLSTM",
     page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -29,72 +29,44 @@ st.caption('Then click the :blue[Detect Objects] button and check the result.')
 st.sidebar.header("ML Model Config")
 
 # Model Options
-model_type = st.sidebar.radio(
-    "Select Task", ['Detection', 'Segmentation'])
+# model_type = st.sidebar.radio(
+#     "Select Task", ['Detection', 'Segmentation'])
 
-confidence = float(st.sidebar.slider(
-    "Select Model Confidence", 25, 100, 40)) / 100
+time_step = int(st.sidebar.slider(
+    "Select TTS Model Timestep", 4, 1000, 50))
 
 # Selecting Detection Or Segmentation
-if model_type == 'Detection':
-    model_path = Path(settings.DETECTION_MODEL)
-elif model_type == 'Segmentation':
-    model_path = Path(settings.SEGMENTATION_MODEL)
+
+tts_model_path = Path(settings.TTS_MODEL)
+mt_model_path = Path(settings.MT_MODEL)
 
 # Load Pre-trained ML Model
 try:
-    model = helper.load_model(model_path)
+    tts_model = helper.load_model(tts_model_path, type='tts')
 except Exception as ex:
-    st.error(f"Unable to load model. Check the specified path: {model_path}")
+    st.error(f"Unable to load model. Check the specified path: {tts_model_path}")
     st.error(ex)
 
-st.sidebar.header("Image/Video Config")
+try:
+    # MT model load
+    mt_model=helper.load_model(mt_model_path, type='mt')
+except Exception as ex:
+    st.error(f"Unable to load model. Check the specified path: {mt_model_path}")
+    st.error(ex)
+
+st.sidebar.header("Video Config")
 source_radio = st.sidebar.radio(
     "Select Source", settings.SOURCES_LIST)
 
 source_img = None
 # If image is selected
-if source_radio == settings.IMAGE:
-    source_img = st.sidebar.file_uploader(
-        "Choose an image...", type=("jpg", "jpeg", "png", 'bmp', 'webp'))
+model = [tts_model, mt_model]
 
-    col1, col2 = st.columns(2)
+# if source_radio == settings.VIDEO:
+#     helper.play_stored_video(time_step, model)
 
-    with col1:
-        try:
-            if source_img:
-                uploaded_image = PIL.Image.open(source_img)
-                st.image(source_img, caption="Uploaded Image",
-                         use_column_width=True)
-        except Exception as ex:
-            st.error("Error occurred while opening the image.")
-            st.error(ex)
-
-    with col2:        
-            if st.sidebar.button('Detect Objects'):
-                res = model.predict(uploaded_image,
-                                    conf=confidence
-                                    )
-                boxes = res[0].boxes
-                res_plotted = res[0].plot()[:, :, ::-1]
-                st.image(res_plotted, caption='Detected Image',
-                         use_column_width=True)
-                try:
-                    with st.expander("Detection Results"):
-                        for box in boxes:
-                            st.write(box.data)
-                except Exception as ex:
-                    # st.write(ex)
-                    st.write("No image is uploaded yet!")
-
-elif source_radio == settings.VIDEO:
-    helper.play_stored_video(confidence, model)
-
-elif source_radio == settings.WEBCAM:
-    helper.play_webcam(confidence, model)
-
-elif source_radio == settings.YOUTUBE:
-    helper.play_youtube_video(confidence, model)
+if source_radio == settings.WEBCAM:
+    helper.play_webcam(time_step, model)
 
 else:
     st.error("Please select a valid source type!")

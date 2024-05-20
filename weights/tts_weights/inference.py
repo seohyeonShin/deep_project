@@ -38,10 +38,10 @@ class PerturbationGradTTS():
     def set_device(self):
         if torch.cuda.is_available():
             device = torch.device('cuda')
-            print('Device is cuda')
+            # print('Device is cuda')
         else:
             device = torch.device('cpu')
-            print('Device is cpu')
+            # print('Device is cpu')
 
         return device
         
@@ -56,8 +56,8 @@ class PerturbationGradTTS():
         return hifi
 
     def get_text(self, text):
-        x = torch.LongTensor(self.intersperse(text_to_sequence(text, ['korean_cleaners']), len(symbols))).cuda()[None]
-        x_lengths = torch.LongTensor([x.shape[-1]]).cuda()
+        x = torch.LongTensor(self.intersperse(text_to_sequence(text, ['korean_cleaners']), len(symbols))).to(self.device)[None]
+        x_lengths = torch.LongTensor([x.shape[-1]]).to(self.device)
 
         return x, x_lengths
     
@@ -73,11 +73,11 @@ class PerturbationGradTTS():
         # Function that generates only one sample
         x, x_lengths = self.get_text(text)
         
-        y_enc, y_dec, attn = self.generator.forward_pass(x.to(self.device), x_lengths.to(self.device), n_timesteps=n_timesteps, temperature=temperature,
+        y_enc, y_dec, attn = self.generator(x.to(self.device), x_lengths.to(self.device), n_timesteps=n_timesteps, temperature=temperature,
                                        stoc=False, spk=None,
                                        length_scale=length_scale)
         with torch.no_grad():
-            audio = self.hifi.forward(y_dec).cpu().squeeze().clamp(-1, 1)
+            audio = self.hifi.forward(y_dec).cpu().squeeze().clamp(-1, 1).numpy()
         
         print('Done!')
         return audio

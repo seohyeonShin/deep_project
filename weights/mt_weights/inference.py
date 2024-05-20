@@ -1,4 +1,4 @@
-from model import CNNtoLSTM
+from .model import CNNtoLSTM
 
 import torch
 import torch.optim as optim
@@ -12,15 +12,12 @@ import numpy as np
 from PIL import Image
 
 
-
-
-
 class MTModel():
-    def __init__(self):
+    def __init__(self, model_path):
         self.sample = 'data/sample.mp4'
         self.device = self.set_device()
         self.model = CNNtoLSTM(num_classes=10).to(self.device)
-        checkpoint = torch.load('checkpts/mt_weight.pth', map_location=torch.device('cpu'))
+        checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
         self.model.load_state_dict(checkpoint)
         self.model.eval()
 
@@ -74,15 +71,15 @@ class MTModel():
     def set_device(self):
         if torch.cuda.is_available():
             device = torch.device('cuda')
-            print('Device is cuda')
+            # print('Device is cuda')
         else:
             device = torch.device('cpu')
-            print('Device is cpu')
+            # print('Device is cpu')
 
         return device
 
-    def infer(self, frame):
-        input = frame.to(self.device)
+    def infer(self, path):
+        input = self.load_frames(path).to(self.device)
         outputs = self.model(input.unsqueeze(0))
         _, predicted = torch.max(outputs.data, 1)
         text = self.sample_to_text[predicted.item()]

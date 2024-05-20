@@ -16,10 +16,9 @@ if root_path not in sys.path:
 ROOT = root_path.relative_to(Path.cwd())
 
 # Sources
-VIDEO = 'Video'
 WEBCAM = 'Webcam'
 
-SOURCES_LIST = [VIDEO, WEBCAM]
+SOURCES_LIST = [WEBCAM]
 
 # Images config
 # IMAGES_DIR = ROOT / 'images'

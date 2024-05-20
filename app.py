@@ -14,7 +14,7 @@ import helper
 
 # Setting page layout
 st.set_page_config(
-    page_title="Object Detection using YOLOv8",
+    page_title="Sign Translation using CNNtoLSTM",
     page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -32,7 +32,7 @@ st.sidebar.header("ML Model Config")
 # model_type = st.sidebar.radio(
 #     "Select Task", ['Detection', 'Segmentation'])
 
-time_step = float(st.sidebar.slider(
+time_step = int(st.sidebar.slider(
     "Select TTS Model Timestep", 4, 1000, 50))
 
 # Selecting Detection Or Segmentation
@@ -62,10 +62,10 @@ source_img = None
 # If image is selected
 model = [tts_model, mt_model]
 
-if source_radio == settings.VIDEO:
-    helper.play_stored_video(time_step, model)
+# if source_radio == settings.VIDEO:
+#     helper.play_stored_video(time_step, model)
 
-elif source_radio == settings.WEBCAM:
+if source_radio == settings.WEBCAM:
     helper.play_webcam(time_step, model)
 
 else:

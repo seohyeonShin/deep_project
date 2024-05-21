@@ -21,13 +21,12 @@ st.set_page_config(
 )
 
 # Main page heading
-st.title("Object Detection")
-st.caption('Updload a photo with this :blue[hand signals]: :+1:, :hand:, :i_love_you_hand_sign:, and :spock-hand:.')
-st.caption('Then click the :blue[Detect Objects] button and check the result.')
+st.title("Sign Translation")
+st.caption('Record your video with this :blue[hand signals]: :+1:, :hand:, :i_love_you_hand_sign:, and :spock-hand:.')
+st.caption('Then click the :blue[Start] button and check the result.')
 
 # Sidebar
-st.sidebar.header("ML Model Config")
-
+st.sidebar.header("TTS Model Config")
 # Model Options
 # model_type = st.sidebar.radio(
 #     "Select Task", ['Detection', 'Segmentation'])

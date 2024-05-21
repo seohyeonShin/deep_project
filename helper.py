@@ -79,7 +79,7 @@ def play_webcam(time_step, model):
     if stop:
         path = file_path
         text = mt_model.infer(path)
-        st.write(text)
+        st.info(text)
 
         audio = tts_model.generate_speech(text, time_step)
         st.audio(audio, format="audio/mp3", sample_rate=22050)

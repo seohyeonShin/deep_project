@@ -42,14 +42,20 @@ class CustomCNN(nn.Module):
         x = self.classifier(x)
         return x
 
+
+
 class CNNtoLSTM(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, num_layers=3, dropout=0.5):
         super(CNNtoLSTM, self).__init__()
         # Using a pre-trained ResNet-50
-        self.cnn = nn.Sequential(*list(models.resnet50(weights=ResNet50_Weights.DEFAULT).children())[:-1])
+        self.cnn = nn.Sequential(
+            *list(models.resnet50(weights=ResNet50_Weights.DEFAULT).children())[:-1],
+            nn.Dropout(dropout)  # Dropout layer with probability 0.5
+        )
         # self.cnn = CustomCNN(num_classes=num_classes)
-        self.lstm = nn.LSTM(input_size=2048, hidden_size=512, num_layers=1, batch_first=True)
+        self.lstm = nn.LSTM(input_size=2048, hidden_size=512, num_layers=num_layers, batch_first=True, dropout=0.5)
         self.fc = nn.Linear(512, num_classes)
+        self.dropout = nn.Dropout(dropout)  # Dropout layer with probability 0.5
 
     def forward(self, x):
         batch_size, timesteps, C, H, W = x.size()
@@ -60,6 +66,8 @@ class CNNtoLSTM(nn.Module):
         r_out = c_out.view(batch_size, timesteps, -1)
         # Pass through LSTM
         lstm_out, _ = self.lstm(r_out)
+        # Apply dropout to LSTM output
+        lstm_out = self.dropout(lstm_out)
         # Decode the hidden state of the last time step
         out = self.fc(lstm_out[:, -1, :])
         return out

@@ -1,6 +1,3 @@
-# this from 
-#https://fulldataalchemist.medium.com/building-your-own-real-time-object-detection-app-roboflow-yolov8-and-streamlit-part-4-16a025c7240c
-
 # Python In-built packages
 from pathlib import Path
 import PIL
@@ -12,18 +9,20 @@ import streamlit as st
 import settings
 import helper
 
-# Setting page layout
+# 페이지이름 설정 
 st.set_page_config(
     page_title="Sign Translation using CNNtoLSTM",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    page_icon="🤖"
 )
 
-# Main page heading
-st.title("Object Detection")
-st.caption('Updload a photo with this :blue[hand signals]: :+1:, :hand:, :i_love_you_hand_sign:, and :spock-hand:.')
-st.caption('Then click the :blue[Detect Objects] button and check the result.')
+# # Main page heading
+# st.title("Sign Translation")
+# st.caption('Class 이름 들어가야함')
+# st.caption('Then click the :blue[Start] button and check the result.')
+
+# Sidebar
+st.sidebar.title("Sign Translation using CNNtoLSTM")
+st.sidebar.header("TTS Model Config")
 
 # Sidebar
 st.sidebar.header("ML Model Config")
@@ -57,6 +56,9 @@ except Exception as ex:
 st.sidebar.header("Video Config")
 source_radio = st.sidebar.radio(
     "Select Source", settings.SOURCES_LIST)
+# Split the screen into 7:3 ratio
+col1, col2 = st.columns([7, 3])
+
 
 source_img = None
 # If image is selected
@@ -66,7 +68,8 @@ model = [tts_model, mt_model]
 #     helper.play_stored_video(time_step, model)
 
 if source_radio == settings.WEBCAM:
-    helper.play_webcam(time_step, model)
-
+    helper.play_webcam(time_step, model, col1, col2)
+elif source_radio == settings.VIDEO_FILE:
+    helper.play_stored_video(time_step, model, col1, col2)
 else:
     st.error("Please select a valid source type!")

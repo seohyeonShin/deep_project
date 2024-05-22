@@ -16,23 +16,13 @@ class MTModel():
     def __init__(self, model_path):
         self.sample = 'data/sample.mp4'
         self.device = self.set_device()
-        self.model = CNNtoLSTM(num_classes=10).to(self.device)
+        self.model = CNNtoLSTM(num_classes=31).to(self.device)
         checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
         self.model.load_state_dict(checkpoint)
         self.model.eval()
 
-        self.sample_to_text = {
-            0 : 'this is zero!',
-            1 : 'this is one!',
-            2 : 'this is two!',
-            3 : 'this is three!',
-            4 : 'this is four!',
-            5 : 'this is five!',
-            6 : 'this is six!',
-            7 : 'this is seven!',
-            8 : 'this is eight!',
-            9 : 'this is nine!'
-        }
+        # self.sample_to_text = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]
+        self.sample_to_text = {0: '가슴', 1: '귀', 2: '기절', 3: '남편', 4: '누나', 5: '다리', 6: '동생', 7: '두드러기생기다', 8: '머리', 9: '무릎', 10: '발', 11: '복통', 12: '손', 13: '숨을안쉬다', 14: '심장마비', 15: '아기', 16: '아내', 17: '아빠', 18: '어깨', 19: '어지러움', 20: '언니', 21: '엄마', 22: '열', 23: '오빠', 24: '피나다', 25: '친구', 26: '팔', 27: '할머니', 28: '할아버지', 29: '형', 30: '호흡곤란'}
 
     def load_frames(self, video_path):
         transform = transform = transforms.Compose([
@@ -79,13 +69,25 @@ class MTModel():
         return device
 
     def infer(self, path):
-        input = self.load_frames(path).to(self.device)
+        try:
+            print(f"infor : {path}")
+            input = self.load_frames(path).to(self.device)
+            outputs = self.model(input.unsqueeze(0))
+            _, predicted = torch.max(outputs.data, 1)
+            print(f"outputs : {outputs}")
+            print(f"predicted.item() : {predicted.item()}")
+            text = self.sample_to_text[predicted.item()]
+        except Exception as e:
+            print(f"infer : {e}")
+        return text
+    
+    def streamling_infer(self,input):
+        print("streamling_infer!!")
+        input = torch.stack(input)
         outputs = self.model(input.unsqueeze(0))
         _, predicted = torch.max(outputs.data, 1)
-        text = self.sample_to_text[predicted.item()]
-
+        text = self.sample_to_text[predicted.item()] 
         return text
-
 
 if __name__ == '__main__':
     mt_model = MTModel()

@@ -2,7 +2,7 @@ import streamlit as st
 import cv2
 import torch
 from pytube import YouTube
-
+import tempfile
 import settings
 
 from weights.tts_weights.inference import PerturbationGradTTS as TTSModel
@@ -55,7 +55,7 @@ def play_webcam(time_step, model,col1,col2):
                     break
 
         except Exception as e:
-            st.sidebar.error("Error loading video: " + str(e))
+            print("Error loading video: " + str(e))
     if stop:
         saved_path_3= "KETI_SL_0000029747.mp4"
         saved_path = "KETI_SL_0000028490.mp4"
@@ -83,9 +83,32 @@ def play_stored_video(time_step, model,col1,col2):
                 text = mt_model.infer(path)
                 col2.info(text)
                 # text = '위의 모델을 통해 추론된 테스트 텍스트입니다.'.encode('utf-8')
-                # audio = tts_model.generate_speech(text, time_step)
-                # col2.audio(audio, format="audio/mp3")
+                audio = tts_model.generate_speech(text, time_step)
+                col2.audio(audio, format="audio/mp3", sample_rate=22050)
             except Exception as e:
-                st.sidebar.error("Error loading video: " + str(e))
                 print(source_vid)
                 print(settings.VIDEOS_DICT.get(source_vid))
+                print(e)
+def play_upload_video(time_step, model, col1, col2):
+    tts_model, mt_model = model
+    
+    # 비디오 파일 업로드
+    uploaded_video = st.sidebar.file_uploader("Upload a video", type=["mp4"])
+    
+    if uploaded_video is not None:
+        video_bytes = uploaded_video.read()
+        col1.video(video_bytes)
+    
+        if st.sidebar.button('Translate Video!'):
+            try:
+                
+                # 저장된 비디오 파일 경로를 사용하여 번역 및 음성 합성 수행
+                video_path = uploaded_video
+                st.sidebar.info(f"Uploaded video path: {video_path}")
+                text = mt_model.infer(uploaded_video.name)
+                col2.info(text)
+                audio = tts_model.generate_speech(text, time_step)
+                col2.audio(audio, format="audio/mp3", sample_rate=22050)
+                
+            except Exception as e:
+                print("Error processing video: " + str(e))
